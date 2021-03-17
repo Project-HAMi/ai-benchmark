@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
 # Copyright 2019-2020 by Andrey Ignatov. All Rights Reserved.
 
-import tensorflow as tf
-import numpy as np
-from psutil import virtual_memory
-from tensorflow.python.client import device_lib
-from pkg_resources import parse_version
 import multiprocessing
-from PIL import Image
-from os import path
-import subprocess
-import platform
-import cpuinfo
-import time
 import os
+import platform
+import subprocess
+import sys
+import time
+from os import path
 
-from ai_benchmark.update_utils import update_info
+from pkg_resources import parse_version
+
+import cpuinfo
+import numpy as np
+import tensorflow as tf
 from ai_benchmark.config import TestConstructor
 from ai_benchmark.models import *
+from ai_benchmark.update_utils import update_info
+from PIL import Image
+from psutil import virtual_memory
+from tensorflow.python.client import device_lib
+from transformers import pipeline
 
 MAX_TEST_DURATION = 100
 
@@ -114,7 +117,7 @@ def resize_image(image, dimensions):
     return image
 
 
-def loadData(test_type, dimensions):
+def loadData(test_type, dimensions, pipeline_type=""):
 
     data = None
     if test_type == "classification":
@@ -122,7 +125,8 @@ def loadData(test_type, dimensions):
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
 
-            image = Image.open(path.join(path.dirname(__file__), "data/classification/" + str(j) + ".jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/classification/" + str(j) + ".jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
@@ -130,7 +134,8 @@ def loadData(test_type, dimensions):
 
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
-            image = Image.open(path.join(path.dirname(__file__), "data/enhancement/" + str(j) + ".jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/enhancement/" + str(j) + ".jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
@@ -138,16 +143,25 @@ def loadData(test_type, dimensions):
 
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
-            image = Image.open(path.join(path.dirname(__file__), "data/segmentation/" + str(j) + ".jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/segmentation/" + str(j) + ".jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
     if test_type == "nlp":
-        data = np.random.uniform(-4, 4, (dimensions[0], dimensions[1], dimensions[2]))
+        data = np.random.uniform(-4, 4,
+                                 (dimensions[0], dimensions[1], dimensions[2]))
 
     if test_type == "nlp-text":
         data = "This is a story of how a Baggins had an adventure, " \
                "and found himself doing and saying things altogether unexpected."
+
+    if test_type == "transformers":
+        if pipeline_type == "sentiment-analysis":
+            data = "We are very happy to include pipeline into the transformers repository."
+        if pipeline_type == "question-answering":
+            data = {'question': 'What is the name of the repository ?',
+                    'context': 'Pipeline have been included in the huggingface/transformers repository'}
 
     return data
 
@@ -165,7 +179,8 @@ def loadTargets(test_type, dimensions):
 
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
-            image = Image.open(path.join(path.dirname(__file__), "data/enhancement/" + str(j) + ".jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/enhancement/" + str(j) + ".jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
@@ -173,7 +188,8 @@ def loadTargets(test_type, dimensions):
 
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
-            image = Image.open(path.join(path.dirname(__file__), "data/enhancement/" + str(j) + ".jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/enhancement/" + str(j) + ".jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
@@ -181,7 +197,8 @@ def loadTargets(test_type, dimensions):
 
         data = np.zeros(dimensions)
         for j in range(dimensions[0]):
-            image = Image.open(path.join(path.dirname(__file__), "data/segmentation/" + str(j) + "_segmented.jpg"))
+            image = Image.open(path.join(path.dirname(
+                __file__), "data/segmentation/" + str(j) + "_segmented.jpg"))
             image = resize_image(image, [dimensions[1], dimensions[2]])
             data[j] = image
 
@@ -218,24 +235,28 @@ def getModelSrc(test, testInfo, session):
         # Bypassing TensorFlow 2.0+ RNN Bugs
 
         if test.model == "LSTM-Sentiment":
-            input_ = tf.compat.v1.placeholder(tf.float32, [None, 1024, 300], name="input")
+            input_ = tf.compat.v1.placeholder(
+                tf.float32, [None, 1024, 300], name="input")
             output_ = LSTM_Sentiment(input_)
 
         if test.model == "Pixel-RNN":
-            input_ = tf.compat.v1.placeholder(tf.float32, [None, 64, 64, 3], name="input")
+            input_ = tf.compat.v1.placeholder(
+                tf.float32, [None, 64, 64, 3], name="input")
             output_ = PixelRNN(input_)
 
-        target_ = tf.compat.v1.placeholder(tf.float32, test.training[0].getOutputDims())
+        target_ = tf.compat.v1.placeholder(
+            tf.float32, test.training[0].getOutputDims())
 
         train_step_ = constructOptimizer(session, output_, target_,  test.training[0].loss_function,
-                                        test.training[0].optimizer,  test.training[0].learning_rate, testInfo.tf_ver_2)
+                                         test.training[0].optimizer,  test.training[0].learning_rate, testInfo.tf_ver_2)
 
         train_vars = [target_, train_step_]
 
     else:
 
         if testInfo.tf_ver_2:
-            tf.compat.v1.train.import_meta_graph(test.model_src, clear_devices=True)
+            tf.compat.v1.train.import_meta_graph(
+                test.model_src, clear_devices=True)
             g = tf.compat.v1.get_default_graph()
         else:
             tf.train.import_meta_graph(test.model_src, clear_devices=True)
@@ -261,12 +282,12 @@ def printTestResults(prefix, batch_size, dimensions, mean, std, verbose):
     if std > 1 and mean > 100:
 
         prt_str = "%s | batch=%d, size=%dx%d: %.d ± %.d ms" % (prefix, batch_size, dimensions[1], dimensions[2],
-                                                                   round(mean), round(std))
+                                                               round(mean), round(std))
 
     else:
 
         prt_str = "%s | batch=%d, size=%dx%d: %.1f ± %.1f ms" % (prefix, batch_size, dimensions[1],
-                                                                     dimensions[2], mean, std)
+                                                                 dimensions[2], mean, std)
 
     try:
         print(prt_str)
@@ -350,7 +371,7 @@ def getNumCpuCores():
     except:
         pass
 
-    return  cpu_cores
+    return cpu_cores
 
 
 def getCpuRAM():
@@ -450,8 +471,10 @@ def printScores(testInfo, public_results):
 
     if testInfo._type == "full":
 
-        inference_score = geometrical_mean(testInfo.results.results_inference_norm)
-        training_score = geometrical_mean(testInfo.results.results_training_norm)
+        inference_score = geometrical_mean(
+            testInfo.results.results_inference_norm)
+        training_score = geometrical_mean(
+            testInfo.results.results_training_norm)
 
         testInfo.results.inference_score = int(inference_score * c_inference)
         testInfo.results.training_score = int(training_score * c_training)
@@ -459,20 +482,25 @@ def printScores(testInfo, public_results):
         public_results.inference_score = testInfo.results.inference_score
         public_results.training_score = testInfo.results.training_score
 
-        testInfo.results.ai_score = testInfo.results.inference_score + testInfo.results.training_score
+        testInfo.results.ai_score = testInfo.results.inference_score + \
+            testInfo.results.training_score
         public_results.ai_score = testInfo.results.ai_score
 
         update_info("scores", testInfo)
 
         if testInfo.verbose_level > 0:
-            print("\nDevice Inference Score: " + str(testInfo.results.inference_score))
-            print("Device Training Score: " + str(testInfo.results.training_score))
+            print("\nDevice Inference Score: " +
+                  str(testInfo.results.inference_score))
+            print("Device Training Score: " +
+                  str(testInfo.results.training_score))
             print("Device AI Score: " + str(testInfo.results.ai_score) + "\n")
-            print("For more information and results, please visit http://ai-benchmark.com/alpha\n")
+            print(
+                "For more information and results, please visit http://ai-benchmark.com/alpha\n")
 
     if testInfo._type == "inference":
 
-        inference_score = geometrical_mean(testInfo.results.results_inference_norm)
+        inference_score = geometrical_mean(
+            testInfo.results.results_inference_norm)
         testInfo.results.inference_score = int(inference_score * c_inference)
 
         public_results.inference_score = testInfo.results.inference_score
@@ -480,12 +508,15 @@ def printScores(testInfo, public_results):
         update_info("scores", testInfo)
 
         if testInfo.verbose_level > 0:
-            print("\nDevice Inference Score: " + str(testInfo.results.inference_score) + "\n")
-            print("For more information and results, please visit http://ai-benchmark.com/alpha\n")
+            print("\nDevice Inference Score: " +
+                  str(testInfo.results.inference_score) + "\n")
+            print(
+                "For more information and results, please visit http://ai-benchmark.com/alpha\n")
 
     if testInfo._type == "training":
 
-        training_score = geometrical_mean(testInfo.results.results_training_norm)
+        training_score = geometrical_mean(
+            testInfo.results.results_training_norm)
         testInfo.results.training_score = int(training_score * c_inference)
 
         public_results.training_score = testInfo.results.training_score
@@ -493,12 +524,15 @@ def printScores(testInfo, public_results):
         update_info("scores", testInfo)
 
         if testInfo.verbose_level > 0:
-            print("\nDevice Training Score: " + str(testInfo.results.training_score) + "\n")
-            print("For more information and results, please visit http://ai-benchmark.com/alpha\n")
+            print("\nDevice Training Score: " +
+                  str(testInfo.results.training_score) + "\n")
+            print(
+                "For more information and results, please visit http://ai-benchmark.com/alpha\n")
 
     if testInfo._type == "micro":
 
-        inference_score = geometrical_mean(testInfo.results.results_inference_norm)
+        inference_score = geometrical_mean(
+            testInfo.results.results_inference_norm)
         testInfo.results.inference_score = int(inference_score * c_inference)
 
         public_results.inference_score = testInfo.results.inference_score
@@ -506,8 +540,10 @@ def printScores(testInfo, public_results):
         update_info("scores", testInfo)
 
         if testInfo.verbose_level > 0:
-            print("\nDevice Inference Score: " + str(testInfo.results.inference_score) + "\n")
-            print("For more information and results, please visit http://ai-benchmark.com/alpha\n")
+            print("\nDevice Inference Score: " +
+                  str(testInfo.results.inference_score) + "\n")
+            print(
+                "For more information and results, please visit http://ai-benchmark.com/alpha\n")
 
     return public_results
 
@@ -531,6 +567,11 @@ def run_tests(training, inference, micro, verbose, use_CPU, precision, _type, st
     public_results = PublicResults()
     os.chdir(path.dirname(__file__))
 
+    for test in benchmark_tests:
+        if test.type == "transformers" and not testInfo.tf_ver_2:
+            print("transformers only works in TensorFlow2.0, program exit")
+            sys.exit()
+
     iter_multiplier = 1
     if precision == "high":
         iter_multiplier = 10
@@ -546,122 +587,179 @@ def run_tests(training, inference, micro, verbose, use_CPU, precision, _type, st
             config = tf.compat.v1.ConfigProto()
         else:
             config = tf.ConfigProto()
-        config.gpu_options.visible_device_list= '0,1'
+        config.gpu_options.visible_device_list = '0'
         print("##### Config Done")
 
     for test in benchmark_tests:
 
         if verbose > 0 and not (micro and len(test.micro) == 0):
-            print("\n" + str(test.id) + "/" + str(len(benchmark_tests)) + ". " + test.model + "\n")
+            print("\n" + str(test.id) + "/" +
+                  str(len(benchmark_tests)) + ". " + test.model + "\n")
         sub_id = 1
 
         tf.compat.v1.reset_default_graph() if testInfo.tf_ver_2 else tf.reset_default_graph()
-        session = tf.compat.v1.Session(config=config) if testInfo.tf_ver_2 else tf.Session(config=config)
+        session = tf.compat.v1.Session(
+            config=config) if testInfo.tf_ver_2 else tf.Session(config=config)
 
-        with tf.Graph().as_default(), session as sess:
+        if test.type is "transformers" and (inference or micro):
+            transformer_model = pipeline(test.model)
+            for subTest in (test.inference if inference else test.micro):
+                time_test_started = getTimeSeconds()
+                inference_times = []
+                for i in range(subTest.iterations * iter_multiplier):
 
-            input_, output_, train_vars_ = getModelSrc(test, testInfo, sess)
+                    if getTimeSeconds() - time_test_started < subTest.max_duration \
+                            or (i < subTest.min_passes and getTimeSeconds() - time_test_started < MAX_TEST_DURATION) \
+                            or precision == "high":
 
-            if testInfo.tf_ver_2:
-                tf.compat.v1.global_variables_initializer().run()
-                if test.type == "nlp-text":
-                    sess.run(tf.compat.v1.tables_initializer())
-            else:
-                tf.global_variables_initializer().run()
-                if test.type == "nlp-text":
-                    sess.run(tf.tables_initializer())
+                        data = loadData(
+                            test.type, subTest.getInputDims(), test.model)
+                        time_iter_started = getTimeMillis()
+                        transformer_model(data)
+                        inference_time = getTimeMillis() - time_iter_started
+                        inference_times.append(inference_time)
 
-            if inference or micro:
+                        if verbose > 1:
+                            print("Inference Time: " +
+                                  str(inference_time) + " ms")
 
-                for subTest in (test.inference if inference else test.micro):
+                time_mean, time_std = computeStats(inference_times)
 
-                    time_test_started = getTimeSeconds()
-                    inference_times = []
+                public_id = "%d.%d" % (test.id, sub_id)
+                public_results.test_results[public_id] = Result(
+                    time_mean, time_std)
 
-                    for i in range(subTest.iterations * iter_multiplier):
+                benchmark_results.results_inference.append(time_mean)
+                benchmark_results.results_inference_norm.append(
+                    float(subTest.ref_time) / time_mean)
 
-                        if getTimeSeconds() - time_test_started < subTest.max_duration \
-                                or (i < subTest.min_passes and getTimeSeconds() - time_test_started < MAX_TEST_DURATION) \
-                                or precision == "high":
+                if verbose > 0:
+                    prefix = "%d.%d - inference" % (test.id, sub_id)
+                    printTestResults(prefix, subTest.batch_size, subTest.getInputDims(
+                    ), time_mean, time_std, verbose)
+                    sub_id += 1
 
-                            data = loadData(test.type, subTest.getInputDims())
-                            time_iter_started = getTimeMillis()
-                            sess.run(output_, feed_dict={input_: data})
-                            inference_time = getTimeMillis() - time_iter_started
-                            inference_times.append(inference_time)
+        else:
+            with tf.Graph().as_default(), session as sess:
+                input_, output_, train_vars_ = getModelSrc(
+                    test, testInfo, sess)
+                if testInfo.tf_ver_2:
+                    tf.compat.v1.global_variables_initializer().run()
+                    if test.type == "nlp-text":
+                        sess.run(tf.compat.v1.tables_initializer())
+                else:
+                    tf.global_variables_initializer().run()
+                    if test.type == "nlp-text":
+                        sess.run(tf.tables_initializer())
 
-                            if verbose > 1:
-                                print("Inference Time: " + str(inference_time) + " ms")
+                if inference or micro:
 
-                    time_mean, time_std = computeStats(inference_times)
+                    if test.type == "transformers":
+                        transformer_model = pipeline(test.model)
 
-                    public_id = "%d.%d" % (test.id, sub_id)
-                    public_results.test_results[public_id] = Result(time_mean, time_std)
+                    for subTest in (test.inference if inference else test.micro):
 
-                    benchmark_results.results_inference.append(time_mean)
-                    benchmark_results.results_inference_norm.append(float(subTest.ref_time) / time_mean)
+                        time_test_started = getTimeSeconds()
+                        inference_times = []
 
-                    if verbose > 0:
-                        prefix = "%d.%d - inference" % (test.id, sub_id)
-                        printTestResults(prefix, subTest.batch_size, subTest.getInputDims(), time_mean, time_std, verbose)
-                        sub_id += 1
+                        for i in range(subTest.iterations * iter_multiplier):
 
-            if training:
+                            if getTimeSeconds() - time_test_started < subTest.max_duration \
+                                    or (i < subTest.min_passes and getTimeSeconds() - time_test_started < MAX_TEST_DURATION) \
+                                    or precision == "high":
 
-                for subTest in test.training:
+                                data = loadData(
+                                    test.type, subTest.getInputDims())
+                                time_iter_started = getTimeMillis()
+                                sess.run(output_, feed_dict={input_: data})
+                                inference_time = getTimeMillis() - time_iter_started
+                                inference_times.append(inference_time)
 
-                    if train_vars_ is None:
+                                if verbose > 1:
+                                    print("Inference Time: " +
+                                          str(inference_time) + " ms")
 
-                        if testInfo.tf_ver_2:
-                            target_ = tf.compat.v1.placeholder(tf.float32, subTest.getOutputDims())
+                        time_mean, time_std = computeStats(inference_times)
+
+                        public_id = "%d.%d" % (test.id, sub_id)
+                        public_results.test_results[public_id] = Result(
+                            time_mean, time_std)
+
+                        benchmark_results.results_inference.append(time_mean)
+                        benchmark_results.results_inference_norm.append(
+                            float(subTest.ref_time) / time_mean)
+
+                        if verbose > 0:
+                            prefix = "%d.%d - inference" % (test.id, sub_id)
+                            printTestResults(prefix, subTest.batch_size, subTest.getInputDims(
+                            ), time_mean, time_std, verbose)
+                            sub_id += 1
+
+                if training:
+
+                    for subTest in test.training:
+
+                        if train_vars_ is None:
+
+                            if testInfo.tf_ver_2:
+                                target_ = tf.compat.v1.placeholder(
+                                    tf.float32, subTest.getOutputDims())
+                            else:
+                                target_ = tf.placeholder(
+                                    tf.float32, subTest.getOutputDims())
+
+                            train_step = constructOptimizer(sess, output_, target_, subTest.loss_function,
+                                                            subTest.optimizer, subTest.learning_rate, testInfo.tf_ver_2)
+
                         else:
-                            target_ = tf.placeholder(tf.float32, subTest.getOutputDims())
 
-                        train_step = constructOptimizer(sess, output_, target_, subTest.loss_function,
-                                                        subTest.optimizer, subTest.learning_rate, testInfo.tf_ver_2)
+                            target_ = train_vars_[0]
+                            train_step = train_vars_[1]
 
-                    else:
+                        time_test_started = getTimeSeconds()
+                        training_times = []
 
-                        target_ = train_vars_[0]
-                        train_step = train_vars_[1]
+                        for i in range(subTest.iterations * iter_multiplier):
 
-                    time_test_started = getTimeSeconds()
-                    training_times = []
+                            if getTimeSeconds() - time_test_started < subTest.max_duration \
+                                    or (i < subTest.min_passes and getTimeSeconds() - time_test_started < MAX_TEST_DURATION) \
+                                    or precision == "high":
 
-                    for i in range(subTest.iterations * iter_multiplier):
+                                data = loadData(
+                                    test.type, subTest.getInputDims())
+                                target = loadTargets(
+                                    test.type, subTest.getOutputDims())
 
-                        if getTimeSeconds() - time_test_started < subTest.max_duration \
-                                or (i < subTest.min_passes and getTimeSeconds() - time_test_started < MAX_TEST_DURATION) \
-                                or precision == "high":
+                                time_iter_started = getTimeMillis()
+                                sess.run(train_step, feed_dict={
+                                    input_: data, target_: target})
+                                training_time = getTimeMillis() - time_iter_started
+                                training_times.append(training_time)
 
-                            data = loadData(test.type, subTest.getInputDims())
-                            target = loadTargets(test.type, subTest.getOutputDims())
+                                if verbose > 1:
+                                    if i == 0 and inference:
+                                        print("\nTraining Time: " +
+                                              str(training_time) + " ms")
+                                    else:
+                                        print("Training Time: " +
+                                              str(training_time) + " ms")
 
-                            time_iter_started = getTimeMillis()
-                            sess.run(train_step, feed_dict={input_: data, target_: target})
-                            training_time = getTimeMillis() - time_iter_started
-                            training_times.append(training_time)
+                        time_mean, time_std = computeStats(training_times)
 
-                            if verbose > 1:
-                                if i == 0 and inference:
-                                    print("\nTraining Time: " + str(training_time) + " ms")
-                                else:
-                                    print("Training Time: " + str(training_time) + " ms")
+                        public_id = "%d.%d" % (test.id, sub_id)
+                        public_results.test_results[public_id] = Result(
+                            time_mean, time_std)
 
-                    time_mean, time_std = computeStats(training_times)
+                        benchmark_results.results_training.append(time_mean)
+                        benchmark_results.results_training_norm.append(
+                            float(subTest.ref_time) / time_mean)
 
-                    public_id = "%d.%d" % (test.id, sub_id)
-                    public_results.test_results[public_id] = Result(time_mean, time_std)
-
-                    benchmark_results.results_training.append(time_mean)
-                    benchmark_results.results_training_norm.append(float(subTest.ref_time) / time_mean)
-
-                    if verbose > 0:
-                        prefix = "%d.%d - training " % (test.id, sub_id)
-                        printTestResults(prefix, subTest.batch_size, subTest.getInputDims(), time_mean, time_std, verbose)
-                        sub_id += 1
-
-        sess.close()
+                        if verbose > 0:
+                            prefix = "%d.%d - training " % (test.id, sub_id)
+                            printTestResults(prefix, subTest.batch_size, subTest.getInputDims(
+                            ), time_mean, time_std, verbose)
+                            sub_id += 1
+            sess.close()
 
     testInfo.results = benchmark_results
     public_results = printScores(testInfo, public_results)
