@@ -21,6 +21,8 @@ In total, AI Benchmark consists of <b>42 tests</b> and <b>19 sections</b> provid
 17. Pixel-RNN&nbsp; `[inpainting]`
 18. LSTM&nbsp; `[sentence sentiment analysis]`
 19. GNMT&nbsp; `[text translation]`
+20. transformers&nbsp; `[sentiment-analysis]`
+21. transformers&nbsp; `[question-answering]`
 
 For more information and results, please visit the project website: [http://ai-benchmark.com/alpha](http://ai-benchmark.com/alpha)</br></br>
 
