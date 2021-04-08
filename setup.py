@@ -7,6 +7,7 @@ REQUIRED_PACKAGES = [
     'pillow',
     'setuptools',
     'requests',
+    'transformers'
 ]
 
 with open("README.md", "r") as fh:
