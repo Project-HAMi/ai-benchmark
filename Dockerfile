@@ -10,4 +10,4 @@ RUN git clone -b feat/transformer https://github.com/shiyoubun/ai-benchmark.git
 WORKDIR ai-benchmark
 RUN pip install -e .
 
-ENTRYPOINT [ "python", "bin/ai-benchmark.py" ]
+ENTRYPOINT [ "python", "main" ]
