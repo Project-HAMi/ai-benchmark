@@ -601,7 +601,7 @@ def run_tests(training, inference, micro, verbose, use_CPU, precision, _type, st
         session = tf.compat.v1.Session(
             config=config) if testInfo.tf_ver_2 else tf.Session(config=config)
 
-        if test.type is "transformers" and (inference or micro):
+        if test.type == "transformers" and (inference or micro):
             transformer_model = pipeline(test.model)
             for subTest in (test.inference if inference else test.micro):
                 time_test_started = getTimeSeconds()
