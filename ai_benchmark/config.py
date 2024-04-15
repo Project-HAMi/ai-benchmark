@@ -205,23 +205,23 @@ class TestConstructor:
                      100, [1024, 300], [2], 22, min_passes=5, max_duration=30, ref_time=547)],
                  tests_micro=[]),
 
-            Test(test_id=19, test_type="nlp-text", model="GNMT-Translation", model_src="gnmt.meta", use_src=False,
-                 tests_training=[],
-                 tests_inference=[
-                     SubTest(1, [1, 20], [None], 22, min_passes=5, max_duration=30, ref_time=193)],
-                 tests_micro=[]),
+            # Test(test_id=19, test_type="nlp-text", model="GNMT-Translation", model_src="gnmt.meta", use_src=False,
+            #      tests_training=[],
+            #      tests_inference=[
+            #          SubTest(1, [1, 20], [None], 22, min_passes=5, max_duration=30, ref_time=193)],
+            #      tests_micro=[]),
 
-            Test(test_id=20, test_type="transformers", model="sentiment-analysis", model_src="", use_src=False,
-                 tests_training=[],
-                 tests_inference=[
-                     SubTest(1, [-1, -1], [None], 22, min_passes=5, max_duration=30, ref_time=220)],
-                 tests_micro=[]),
+            # Test(test_id=20, test_type="transformers", model="sentiment-analysis", model_src="", use_src=False,
+            #      tests_training=[],
+            #      tests_inference=[
+            #          SubTest(1, [-1, -1], [None], 22, min_passes=5, max_duration=30, ref_time=220)],
+            #      tests_micro=[]),
 
-            Test(test_id=21, test_type="transformers", model="question-answering", model_src="", use_src=False,
-                 tests_training=[],
-                 tests_inference=[
-                     SubTest(1, [-1, -1], [None], 22, min_passes=5, max_duration=30, ref_time=230)],
-                 tests_micro=[])
+            # Test(test_id=21, test_type="transformers", model="question-answering", model_src="", use_src=False,
+            #      tests_training=[],
+            #      tests_inference=[
+            #          SubTest(1, [-1, -1], [None], 22, min_passes=5, max_duration=30, ref_time=230)],
+            #      tests_micro=[])
 
         ]
 

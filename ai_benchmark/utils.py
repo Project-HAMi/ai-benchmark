@@ -301,9 +301,6 @@ def printIntro():
     print("\n>>   AI-Benchmark-v.0.1.2   ")
     print(">>   Let the AI Games begin..\n")
 
-    # print("\n>>   𝓐𝓘-𝓑𝓮𝓷𝓬𝓱𝓶𝓪𝓻𝓴-𝓿.0.1.2   ")
-    # print(">>   𝐿𝑒𝓉 𝓉𝒽𝑒 𝒜𝐼 𝒢𝒶𝓂𝑒𝓈 𝒷𝑒𝑔𝒾𝓃..\n")
-
 
 def printTestInfo(testInfo):
 

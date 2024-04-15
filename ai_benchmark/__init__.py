@@ -74,8 +74,3 @@ class AIBenchmark:
         return run_tests(training=False, inference=False, micro=True, verbose=self.verbose,
                          use_CPU=self.use_CPU, precision=precision, _type="micro", start_dir=self.cwd, batch_mul=batch_mul)
 
-
-if __name__ == "__main__":
-
-    benchmark = AIBenchmark(use_CPU=None, verbose_level=1)
-    results = benchmark.run(precision="normal")
