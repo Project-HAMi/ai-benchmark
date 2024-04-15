@@ -9,16 +9,18 @@ def LSTM_Sentiment(input_tensor):
 
     #  Reference Paper: https://www.bioinf.jku.at/publications/older/2604.pdf
 
-    lstmCell = tf.compat.v1.nn.rnn_cell.BasicLSTMCell(1024)
-    output_rnn, _ = tf.compat.v1.nn.dynamic_rnn(lstmCell, input_tensor, dtype=tf.float32)
+    # Create a basic LSTM cell
+    lstmCell = tf.keras.layers.LSTMCell(1024)
+    # Convert cell to LSTM layer and get the output
+    lstmLayer = tf.keras.layers.RNN(lstmCell, return_sequences=True, return_state=True)
+    output_rnn, _ , _ = lstmLayer(input_tensor)
 
-    W_fc = tf.Variable(tf.random.truncated_normal([1024, 2]))
-    b_fc = tf.Variable(tf.constant(0.1, shape=[2]))
-
-    output_transposed = tf.transpose(output_rnn, perm=[1, 0, 2])
-    output = tf.gather(output_transposed, int(output_transposed.get_shape()[0]) - 1)
-
-    return tf.identity(tf.matmul(output, W_fc) + b_fc, name="output")
+    # Dense layer to predict the output
+    denseLayer = tf.keras.layers.Dense(2)
+    
+    output = output_rnn[:, -1, :]
+    
+    return tf.identity(denseLayer(output), name="output")
 
 
 def PixelRNN(inputs):
