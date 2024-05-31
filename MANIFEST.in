@@ -1,0 +1,5 @@
+include ai_benchmark/models/*.meta
+include ai_benchmark/data/classification/*
+include ai_benchmark/data/enhancement/*
+include ai_benchmark/data/nlp/*
+include ai_benchmark/data/segmentation/*
