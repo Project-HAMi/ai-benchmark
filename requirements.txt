@@ -6,3 +6,4 @@ setuptools
 requests
 transformers
 tensorflow
+loguru
